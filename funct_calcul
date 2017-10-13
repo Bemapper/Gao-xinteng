@@ -1,0 +1,111 @@
+# -*- coding: utf-8 -*-
+import csv
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import os
+
+### 计算独特性 ###
+def specialty(path_scene_special,path_scene,path_city,path_specialty,path_tag_list):
+    # 读取标签 #
+    f_tag = pd.read_csv(path_tag_list)
+    tags = f_tag["title"]
+
+    # 将城市信息以id及特征为key的字典储存 #
+    citys = {}
+    with open(path_city, encoding='utf-8-sig') as file_city:
+        file_city_csv = csv.reader(file_city, delimiter=';')
+        headers = next(file_city_csv)
+        index_id_city = headers.index('id_city')
+        for row in file_city_csv:
+            citys[row[index_id_city]] = {'score_special': 0}
+            for tag in tags:
+                citys[row[index_id_city]][tag] = 0
+        file_city.close()
+
+    len_specialy = len(tags)+1  # 特征数量
+    len_citys = len(citys)  # 城市数量
+    
+    # 计算各特征得分 #
+    f_scene = pd.read_csv(path_scene)
+
+    for index in range(len(f_scene)):
+            id_city = str(f_scene["id_city"][index])
+            for tag in citys[id_city].keys():
+                if f_scene["tag"][index].find(tag) > 0:
+                    citys[id_city][tag] = citys[row[index_id_city]][tag] \
+                                        + f_scene["score"][index]/(len(f_scene["tag"][index].split(',')))
+
+    # 计算特殊景点得分 #
+    coef_scene_great, coef_scene, coef_scene_nation_great, coef_scene_nation = [1, 1, 1, 1]
+    f_scene_special = pd.read_csv(path_scene_special)
+    for index in range(len(f_scene_special)):
+        id_city = str(f_scene_special["city"][index])
+        if id_city in citys.keys():
+            if f_scene_special["level"][index] == 1:
+                if f_scene_special["type"][index] == 3:
+                    citys[id_city]['score_special'] += 10 * coef_scene_great
+                else:
+                    citys[id_city]['score_special'] += 5 * coef_scene
+            else:
+                if f_scene_special["type"][index] == 3:
+                    citys[id_city]['score_special'] += 4 * coef_scene_nation_great
+                else:
+                    citys[id_city]['score_special'] += 2 * coef_scene_nation
+    # 储存信息至列表，方便后期输出 #
+    citys_special_list = []
+    id_citys = list(citys.keys())
+    plt.figure(1)
+    for index in range(len_citys):
+        x = []
+        y = []
+        id_city = id_citys[index]
+        s = 0
+        citys_special_list.append(list(citys[id_city].values()))
+        # 城市信息可视化 #
+        x = range(len_specialy)
+        y = list(citys[id_city].values())
+        plt.plot(x, y, 'o--')
+
+    mean = []
+    for j in range(len_specialy):
+        li = []
+        for i in range(len_citys):
+            li.append(citys_special_list[i][j])
+        mean.append(np.mean(li))
+
+    x = range(len_specialy)
+    y = mean
+    plt.plot(x, y, 'black')
+   
+   # 计算var 等价景点特征得分 #
+    var = []
+    for i in range(len_citys):
+        score = 0.0
+        for j in range(len_specialy):
+            score += np.sqrt(pow((float(citys_special_list[i][j]) - float(mean[j])), 2))
+        var.append(score)
+
+    plt.show()
+    # 输出景点独特性信息 #
+    for index in range(0, len_citys):
+        citys_special_list[index].insert(0, id_citys[index])
+        citys_special_list[index].insert(1, var[index])
+
+    headers = ['id_city'] + ['var'] + list(citys['320001'].keys())
+    with open(path_specialty, 'w', newline='') as f:
+        f_csv = csv.writer(f)
+        f_csv.writerow(headers)
+        f_csv.writerows(citys_special_list)
+        f.close()
+        
+### 计算城市各特征得分 ###
+def score_calcul(file_name, indice, poids):# indice ： 需要读取的列的名称，poids： 权重
+    df = pd.read_csv(file_name)
+    number_indice = len(indice)
+    # initialisatio
+    score = (df[indice[0]] / max(df[indice[0]])) * 100 * poids[0]
+    if number_indice > 1:
+        for i in range(1, number_indice):
+            score = score + (df[indice[i]] / max(df[indice[i]])) * 100 * poids[i]
+    return score
