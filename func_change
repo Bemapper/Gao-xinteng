@@ -1,0 +1,126 @@
+# -*- coding: utf-8 -*-
+import csv
+import os
+
+
+'''替换景点中的标签 
+@path_tag 标签文件路径 标签信息文件格式[原标签，新标签1，新标签2,...] 
+@path_scene 景点文件路径 
+@path_new_scene 生成新的景点文件路径  
+@path_tag_list 标签种类文件路径  
+'''
+def tag_change( path_tag,path_tag_list, path_scene, path_new_scene):
+    tag_list = []  # 景点标签列表
+    scene_list = []  # 景点列表
+    dic_tag = {}   # 新旧标签字典
+    # 构建key = 原标签，value = 对应的新标签的字典 #
+    with open(path_tag, encoding='utf-8') as file_tag:  # 将文件读取并转换为UTF-8编码格式
+        file_tag_csv = csv.reader(file_tag)
+        headers = next(file_tag_csv)
+        for row in file_tag_csv:
+            tag = []
+            for index in range(1, len(row)):
+                if row[index] != '':
+                    tag.append(row[index])
+                    tag_list.append(row[index])  # row[0]是原标签
+            dic_tag[row[0]] = tag
+        file_tag.close()
+
+        # 用新标签替换原标签 #
+        with open(path_scene, encoding='utf-8-sig') as file_scene:
+            file_scene_csv = csv.reader(file_scene, delimiter=";")
+            headers = next(file_scene_csv)
+            index_tag = headers.index('tag')
+            for row in file_scene_csv:
+                row[index_tag] = row[index_tag].split(',')  # 将标签分割
+                # 替换标签 #
+                tag = set()
+                for index in range(len(row[index_tag])):
+                    row[index_tag][index] = row[index_tag][index].lstrip(' ')  # 去除开头的空格符
+                    if row[index_tag][index] in dic_tag.keys():
+                        tag.update(dic_tag[row[index_tag][index]])  # 标签去重
+                row[index_tag] = list(tag)
+                scene_list.append(row)
+            file_scene.close()
+
+            # 输出更改后的文件 #
+            with open(path_new_scene, 'w', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow(headers)
+                writer.writerows(scene_list)
+                f.close()
+
+    # 输出景点标签的文件 #
+    with open(path_tag_list, 'w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(['title'])
+        for tag in set(tag_list):
+            writer.writerow([tag])
+        f.close()
+
+'''替换城市ID
+@path_cityid 城市id文件路径 
+@path_file 需要更改城市id的文件路径
+@path_new_file 更改后的文件路径
+'''
+def id_city_change(path_file, path_city,path_new_file):
+    dic_city = {}
+    new_list =[]
+    # 构建城市与城市id的对应字典 #
+    with open(path_city, encoding='utf-8-sig') as file_city:  # 将windows处理后的文件按UTF-8-sig编码格式读取
+        file_city_csv = csv.reader(file_city, delimiter=";")
+        headers = next(file_city_csv)
+        index_city = headers.index('city')
+        index_id_city = headers.index('id_city')
+        for row in file_city_csv:
+            dic_city[row[index_city]] = row[index_id_city]
+        file_city.close()
+
+    # 名称变为id #
+    with open(path_file, encoding='utf-8-sig') as file:
+        file_csv = csv.reader(file)
+        headers = next(file_csv)
+        index_city = headers.index('city')
+        for row in file_csv:
+            if row[index_city] in dic_city.keys():
+                row[index_city] = dic_city[row[index_city]]
+                new_list.append(row)
+        file.close()
+
+        # 输出更改后的文件 #
+        with open(path_new_file, 'w', newline='') as f:  # 换行符为空
+            f_csv = csv.writer(f)
+            f_csv.writerow(headers)
+            f_csv.writerows(new_list)
+            f.close()
+
+def city_change(path_file, path_city,path_new_file):
+    dic_city = {}
+    new_list = []
+    # 构建城市与城市id的对应字典 #
+    with open(path_city, encoding='utf-8-sig') as file_city:
+        file_city_csv = csv.reader(file_city, delimiter=";")
+        headers = next(file_city_csv)
+        index_city = headers.index('city')
+        index_id_city = headers.index('id_city')
+        for row in file_city_csv:
+            dic_city[row[index_id_city]] = row[index_city]
+        file_city.close()
+
+    # id变为名称 #
+    with open(path_file) as file:
+        file_csv = csv.reader(file)
+        headers = next(file_csv)
+        index_id_city = headers.index('id_city')
+        for row in file_csv:
+            if row[index_id_city] in dic_city.keys():
+                row[index_id_city] = dic_city[row[index_id_city]]
+                new_list.append(row)
+        file.close()
+
+        # 输出更改后的文件 #
+        with open(path_new_file, 'w', newline='') as f:
+            f_csv = csv.writer(f)
+            f_csv.writerow(headers)
+            f_csv.writerows(new_list)
+            f.close()
