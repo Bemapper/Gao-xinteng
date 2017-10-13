@@ -109,3 +109,32 @@ def score_calcul(file_name, indice, poids):# indice ： 需要读取的列的名
         for i in range(1, number_indice):
             score = score + (df[indice[i]] / max(df[indice[i]])) * 100 * poids[i]
     return score
+
+### 计算城市历史性 ###
+
+def specialty(file_name):
+    
+    #读取excel表格#
+    df = pd.read_excel(file_name)
+    
+    #读取城市名，城市id，全国文物保护单位，省文物保护单位，世界文化遗产数并存入df1#
+    df1 = df[['name','idCity','unit_num_na','unit_num_pro','world_num']]
+    
+    #找到每列最大值#
+    unit_na_max = df1['unit_num_na'].max()
+    unit_pro_max = df1['unit_num_pro'].max()
+    unit_world_max = df1['world_num'].max()
+    
+    #列数据归一化#
+    df1["na_grade"] = 100*df1["unit_num_na"]/unit_na_max
+    df1["pro_grade"] = 100*df1["unit_num_pro"]/unit_pro_max
+    df1["world_grade"] = 100*df1["world_num"]/unit_world_max
+    
+    #加权计算出总得分#
+    df1["total_grade"] = 0.4*df1["na_grade"]+0.2*df1["pro_grade"]+0.4*df1["world_grade"]
+
+    print(df1)
+    
+    #输出为excel与csv格式#
+    df1.to_excel('city_history.xls', index=False)
+    df1.to_csv('city_history.csv', index=False)
